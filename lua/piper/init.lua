@@ -120,19 +120,19 @@ local function is_piper_buffer(buf)
   return ok
 end
 
--- Get all windows showing piper buffers, sorted by column position (left to right)
+-- Get all windows showing piper buffers, sorted by row position (top to bottom)
 local function get_piper_windows()
   local piper_wins = {}
   for _, win in ipairs(vim.api.nvim_list_wins()) do
     local buf = vim.api.nvim_win_get_buf(win)
     if is_piper_buffer(buf) then
       local pos = vim.api.nvim_win_get_position(win)
-      table.insert(piper_wins, { win = win, col = pos[2] })
+      table.insert(piper_wins, { win = win, row = pos[1] })
     end
   end
-  -- Sort by column position (leftmost first)
+  -- Sort by row position (topmost first)
   table.sort(piper_wins, function(a, b)
-    return a.col < b.col
+    return a.row < b.row
   end)
   return piper_wins
 end
@@ -164,7 +164,7 @@ local function is_empty_unnamed_buffer(buf)
   return true
 end
 
--- Open buffer in a new vertical split to the left, managing visible window count
+-- Open buffer in a new horizontal split below, managing visible window count
 local function open_buffer(buf)
   -- If current buffer is empty and unnamed (default startup buffer),
   -- just replace it instead of creating a split
@@ -173,19 +173,19 @@ local function open_buffer(buf)
     return
   end
 
-  -- Create vertical split to the left and show the new buffer
-  vim.cmd("leftabove vsplit")
+  -- Create horizontal split below and show the new buffer
+  vim.cmd("rightbelow split")
   vim.api.nvim_set_current_buf(buf)
 
   -- Get all piper windows after the split
   local piper_wins = get_piper_windows()
 
-  -- If we have more than max_visible piper windows, close the rightmost one
+  -- If we have more than max_visible piper windows, close the topmost one
   while #piper_wins > M.config.max_visible do
-    local rightmost = piper_wins[#piper_wins]
+    local topmost = piper_wins[1]
     -- Don't close the window we just created
-    if rightmost.win ~= vim.api.nvim_get_current_win() then
-      vim.api.nvim_win_close(rightmost.win, false)
+    if topmost.win ~= vim.api.nvim_get_current_win() then
+      vim.api.nvim_win_close(topmost.win, false)
     end
     piper_wins = get_piper_windows()
   end
