@@ -1,5 +1,5 @@
 IMAGE_NAME := piper-nvim-dev
-PLUGIN_LUA := piper.nvim/lua
+PLUGIN_LUA := lua
 
 .PHONY: lint luacheck luals check docker-build shell clean
 
