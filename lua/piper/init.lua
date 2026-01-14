@@ -650,7 +650,7 @@ function M.setup(opts)
   M.config = vim.tbl_deep_extend("force", M.config, opts)
 
   -- Create user commands
-  vim.api.nvim_create_user_command("Pipe", function()
+  vim.api.nvim_create_user_command("PipePrompt", function()
     M.pipe()
   end, { desc = "Pipe current buffer through a shell command" })
 
