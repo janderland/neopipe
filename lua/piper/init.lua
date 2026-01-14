@@ -654,7 +654,7 @@ function M.setup(opts)
     M.pipe()
   end, { desc = "Pipe current buffer through a shell command" })
 
-  vim.api.nvim_create_user_command("Pipet", function()
+  vim.api.nvim_create_user_command("PipeTerm", function()
     M.pipet()
   end, { desc = "Open terminal with $IN and $OUT for interactive piping" })
 
