@@ -42,8 +42,9 @@ RUN mkdir -p /opt/lua-language-server/meta/3rd && \
 WORKDIR /workspace
 
 # Copy plugin and config files
-COPY piper.nvim/ ./piper.nvim/
+COPY lua/ ./lua/
+COPY plugin/ ./plugin/
 COPY .luarc.json .luacheckrc ./
 
 # Default command runs luacheck
-CMD ["luacheck", "piper.nvim/lua/"]
+CMD ["luacheck", "lua/"]
