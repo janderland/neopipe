@@ -219,6 +219,22 @@ For a cleaner workflow, use `:PipeLoad` with a command:
 nvim -c "PipeLoad !kubectl get pods -o json"
 ```
 
+Add this function to your `.bashrc` or `.zshrc` for quick access:
+
+```bash
+np() {
+  nvim -c "PipeLoad !$*"
+}
+```
+
+Then use it directly from your shell:
+
+```bash
+np kubectl get pods -o json
+np curl -s https://api.example.com/data
+np cat /var/log/syslog
+```
+
 ## How It Works
 
 Each piper buffer stores metadata:
