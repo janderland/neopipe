@@ -342,6 +342,8 @@ end
 
 -- PipeList command: show all piper buffers with lineage
 function M.pipe_list()
+  local prev_win = vim.api.nvim_get_current_win()
+
   -- Collect valid piper buffers
   local entries = {}
   local valid_buffers = {}
@@ -466,6 +468,10 @@ function M.pipe_list()
     local entry = get_selected_entry()
     if entry and vim.api.nvim_buf_is_valid(entry.buf) then
       vim.api.nvim_win_close(list_win, true)
+      -- Return to previous window before opening split
+      if vim.api.nvim_win_is_valid(prev_win) then
+        vim.api.nvim_set_current_win(prev_win)
+      end
       open_buffer(entry.buf)
     end
   end, { buffer = list_buf, nowait = true })
