@@ -31,9 +31,9 @@ local function create_piper_buffer(content, cmd, parent_id)
   M.next_id = M.next_id + 1
 
   -- Set buffer options
-  vim.api.nvim_buf_set_option(buf, "buftype", "nofile")
-  vim.api.nvim_buf_set_option(buf, "bufhidden", "hide")
-  vim.api.nvim_buf_set_option(buf, "swapfile", false)
+  vim.bo[buf].buftype = "nofile"
+  vim.bo[buf].bufhidden = "hide"
+  vim.bo[buf].swapfile = false
 
   -- Set buffer name
   local safe_cmd = cmd:gsub("[\n\r]", " "):sub(1, 50)
@@ -48,7 +48,7 @@ local function create_piper_buffer(content, cmd, parent_id)
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
 
   -- Make buffer read-only after setting content
-  vim.api.nvim_buf_set_option(buf, "modifiable", false)
+  vim.bo[buf].modifiable = false
 
   -- Set buffer variables
   vim.api.nvim_buf_set_var(buf, "piper_id", id)
@@ -123,7 +123,6 @@ function M.pipe()
   local content = get_buffer_content()
   local parent_id = get_current_piper_id()
   local prev_win = vim.api.nvim_get_current_win()
-  local prev_buf = vim.api.nvim_get_current_buf()
 
   -- Create temp files
   local input_file = write_temp_file(content, ".piper_in")
@@ -388,13 +387,13 @@ function M.pipe_list()
 
   -- Create list buffer
   local list_buf = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_option(list_buf, "buftype", "nofile")
-  vim.api.nvim_buf_set_option(list_buf, "bufhidden", "wipe")
-  vim.api.nvim_buf_set_option(list_buf, "swapfile", false)
+  vim.bo[list_buf].buftype = "nofile"
+  vim.bo[list_buf].bufhidden = "wipe"
+  vim.bo[list_buf].swapfile = false
   vim.api.nvim_buf_set_name(list_buf, "piper://list")
 
   vim.api.nvim_buf_set_lines(list_buf, 0, -1, false, display_lines)
-  vim.api.nvim_buf_set_option(list_buf, "modifiable", false)
+  vim.bo[list_buf].modifiable = false
 
   -- Store entries for keymap handlers
   vim.api.nvim_buf_set_var(list_buf, "piper_list_entries", entries)
@@ -468,9 +467,9 @@ function M.pipe_list()
         table.insert(new_lines, line)
       end
 
-      vim.api.nvim_buf_set_option(list_buf, "modifiable", true)
+      vim.bo[list_buf].modifiable = true
       vim.api.nvim_buf_set_lines(list_buf, 0, -1, false, new_lines)
-      vim.api.nvim_buf_set_option(list_buf, "modifiable", false)
+      vim.bo[list_buf].modifiable = false
 
       -- Adjust cursor if needed
       local cursor = vim.api.nvim_win_get_cursor(0)
