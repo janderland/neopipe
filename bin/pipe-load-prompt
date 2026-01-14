@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
 # pipe-load-prompt - Interactive prompt for loading command output into buffer
 #
 # Usage: pipe-load-prompt <output_file> <cmd_file>
@@ -8,11 +8,11 @@
 #   cmd_file    - File where the executed command will be recorded
 #
 # Features:
-#   - Full readline support (history, Ctrl+R, tab completion, env vars)
+#   - Full ZLE support (history, Ctrl+R, tab completion, env vars)
+#   - Vi keybindings with working reverse search
+#   - On failure, shows error and re-prompts with command pre-filled
 #   - Command is written to cmd_file for the calling process
 #   - Exit status matches the executed command's exit status
-
-set -o pipefail
 
 if [[ $# -ne 2 ]]; then
     echo "Usage: pipe-load-prompt <output_file> <cmd_file>" >&2
@@ -22,27 +22,31 @@ fi
 output_file="$1"
 cmd_file="$2"
 
-# Enable vi line editing mode
-set -o vi
+# Enable vi mode
+bindkey -v
 
-# Prompt for command with readline support
-# -e enables readline editing
-# -p sets the prompt
-if ! read -e -p "load> " cmd; then
-    # User pressed Ctrl+C or Ctrl+D
-    exit 130
-fi
+cmd=""
+while true; do
+    # Prompt for command using vared (ZLE-based editing)
+    # cmd retains previous value for editing on retry
+    if ! vared -p "load> " cmd; then
+        # User pressed Ctrl+C or Ctrl+D
+        exit 130
+    fi
 
-# Handle empty command
-if [[ -z "$cmd" ]]; then
-    exit 0
-fi
+    # Handle empty command
+    if [[ -z "$cmd" ]]; then
+        exit 0
+    fi
 
-# Write command to cmd_file
-echo "$cmd" > "$cmd_file"
+    # Execute command and capture output
+    # stderr goes to terminal so user sees errors
+    if eval "$cmd" > "$output_file"; then
+        # Success - write command and exit
+        echo "$cmd" > "$cmd_file"
+        exit 0
+    fi
 
-# Execute command and capture output
-eval "$cmd" > "$output_file"
-exit_status=$?
-
-exit $exit_status
+    # Command failed - loop to retry
+    echo ""
+done

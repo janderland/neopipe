@@ -334,43 +334,21 @@ function M.pipet()
   vim.cmd("startinsert")
 end
 
--- PipeLoad command: bootstrap a new piper buffer from file or command
-function M.pipe_load(source)
-  if not source or source == "" then
-    vim.notify("PipeLoad requires a source (file path or !command)", vim.log.levels.ERROR)
+-- PipeLoad command: bootstrap a new piper buffer from command output
+function M.pipe_load(cmd)
+  if not cmd or cmd == "" then
+    vim.notify("PipeLoad requires a command", vim.log.levels.ERROR)
     return
   end
 
-  local content
-  local cmd
-
-  if source:sub(1, 1) == "!" then
-    -- Command mode
-    cmd = source
-    local shell_cmd = source:sub(2)
-    local output = vim.fn.system(shell_cmd)
-    if vim.v.shell_error ~= 0 then
-      vim.notify("Command failed with exit code " .. vim.v.shell_error, vim.log.levels.ERROR)
-      return
-    end
-    content = output
-  else
-    -- File mode
-    cmd = source
-    local expanded = vim.fn.expand(source)
-    if vim.fn.filereadable(expanded) ~= 1 then
-      vim.notify("Cannot read file: " .. source, vim.log.levels.ERROR)
-      return
-    end
-    content = read_file(expanded)
-    if not content then
-      vim.notify("Failed to read file: " .. source, vim.log.levels.ERROR)
-      return
-    end
+  local output = vim.fn.system(cmd)
+  if vim.v.shell_error ~= 0 then
+    vim.notify("Command failed with exit code " .. vim.v.shell_error, vim.log.levels.ERROR)
+    return
   end
 
   -- Create new piper buffer (no parent for initial loads)
-  local buf, _ = create_piper_buffer(content, cmd, nil)
+  local buf, _ = create_piper_buffer(output, "!" .. cmd, nil)
   open_buffer(buf)
 end
 
@@ -650,17 +628,17 @@ function M.setup(opts)
   M.config = vim.tbl_deep_extend("force", M.config, opts)
 
   -- Create user commands
-  vim.api.nvim_create_user_command("Pipe", function()
+  vim.api.nvim_create_user_command("PipePrompt", function()
     M.pipe()
   end, { desc = "Pipe current buffer through a shell command" })
 
-  vim.api.nvim_create_user_command("Pipet", function()
+  vim.api.nvim_create_user_command("PipeTerm", function()
     M.pipet()
   end, { desc = "Open terminal with $IN and $OUT for interactive piping" })
 
   vim.api.nvim_create_user_command("PipeLoad", function(cmd_opts)
     M.pipe_load(cmd_opts.args)
-  end, { nargs = 1, complete = "file", desc = "Load file or command output into piper buffer" })
+  end, { nargs = 1, desc = "Load command output into piper buffer" })
 
   vim.api.nvim_create_user_command("PipeList", function()
     M.pipe_list()
