@@ -364,7 +364,7 @@ function M.pipe_list()
   )
   table.insert(display_lines, header)
 
-  local sep = string.rep("─", max_id + 1)
+  local sep = string.rep("─", max_id + 2)
     .. "┼"
     .. string.rep("─", max_parent + 2)
     .. "┼"
