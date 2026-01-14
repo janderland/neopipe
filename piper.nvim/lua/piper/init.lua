@@ -9,6 +9,7 @@ M.config = {
   shell = vim.o.shell,
   prompt_height = 3,
   terminal_height = 15,
+  max_visible = 3,
 }
 
 -- State: mapping piper_id -> buffer number
@@ -113,9 +114,47 @@ local function delete_file(path)
   end
 end
 
--- Open buffer in current window
+-- Check if a buffer is a piper buffer
+local function is_piper_buffer(buf)
+  local ok = pcall(vim.api.nvim_buf_get_var, buf, "piper_id")
+  return ok
+end
+
+-- Get all windows showing piper buffers, sorted by column position (left to right)
+local function get_piper_windows()
+  local piper_wins = {}
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    local buf = vim.api.nvim_win_get_buf(win)
+    if is_piper_buffer(buf) then
+      local pos = vim.api.nvim_win_get_position(win)
+      table.insert(piper_wins, { win = win, col = pos[2] })
+    end
+  end
+  -- Sort by column position (leftmost first)
+  table.sort(piper_wins, function(a, b)
+    return a.col < b.col
+  end)
+  return piper_wins
+end
+
+-- Open buffer in a new vertical split to the left, managing visible window count
 local function open_buffer(buf)
+  -- Create vertical split to the left and show the new buffer
+  vim.cmd("leftabove vsplit")
   vim.api.nvim_set_current_buf(buf)
+
+  -- Get all piper windows after the split
+  local piper_wins = get_piper_windows()
+
+  -- If we have more than max_visible piper windows, close the rightmost one
+  while #piper_wins > M.config.max_visible do
+    local rightmost = piper_wins[#piper_wins]
+    -- Don't close the window we just created
+    if rightmost.win ~= vim.api.nvim_get_current_win() then
+      vim.api.nvim_win_close(rightmost.win, false)
+    end
+    piper_wins = get_piper_windows()
+  end
 end
 
 -- Pipe command: opens small terminal with pipe-prompt

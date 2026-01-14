@@ -7,6 +7,7 @@ Build data processing pipelines interactively by piping buffer contents through 
 ## Features
 
 - **Pipeline Building**: Pipe any buffer through shell commands to create new buffers
+- **Side-by-Side View**: New buffers appear in vertical splits to the left, with configurable max visible
 - **Buffer History**: All buffers remain accessible via `:PipeList`
 - **Parent Tracking**: Each buffer knows which buffer it came from
 - **Two Modes**: Quick single-command (`:Pipe`) or exploratory shell (`:Pipet`)
@@ -177,6 +178,10 @@ require('piper').setup({
 
   -- Height of the :Pipet terminal (default: 15)
   terminal_height = 15,
+
+  -- Maximum number of piper buffers visible at once (default: 3)
+  -- New buffers appear in a split to the left; rightmost closes when exceeded
+  max_visible = 3,
 })
 ```
 
