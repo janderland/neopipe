@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# pipe-prompt - Interactive prompt for piping buffer contents through commands
+#
+# Usage: pipe-prompt <input_file> <output_file> <cmd_file>
+#
+# Arguments:
+#   input_file  - File containing the input to pipe to the command
+#   output_file - File where command output will be written
+#   cmd_file    - File where the executed command will be recorded
+#
+# Features:
+#   - Full readline support (history, Ctrl+R, tab completion, env vars)
+#   - Command is written to cmd_file for the calling process
+#   - Exit status matches the executed command's exit status
+
+set -o pipefail
+
+if [[ $# -ne 3 ]]; then
+    echo "Usage: pipe-prompt <input_file> <output_file> <cmd_file>" >&2
+    exit 1
+fi
+
+input_file="$1"
+output_file="$2"
+cmd_file="$3"
+
+# Verify input file exists
+if [[ ! -r "$input_file" ]]; then
+    echo "Error: Cannot read input file: $input_file" >&2
+    exit 1
+fi
+
+# Enable vi line editing mode
+set -o vi
+
+# Prompt for command with readline support
+# -e enables readline editing
+# -p sets the prompt
+if ! read -e -p "pipe> " cmd; then
+    # User pressed Ctrl+C or Ctrl+D
+    exit 130
+fi
+
+# Handle empty command
+if [[ -z "$cmd" ]]; then
+    exit 0
+fi
+
+# Write command to cmd_file
+echo "$cmd" > "$cmd_file"
+
+# Execute command with input piped and output captured
+eval "$cmd" < "$input_file" > "$output_file"
+exit_status=$?
+
+exit $exit_status
