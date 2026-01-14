@@ -137,8 +137,42 @@ local function get_piper_windows()
   return piper_wins
 end
 
+-- Check if a buffer is empty and unnamed (like the default buffer on startup)
+local function is_empty_unnamed_buffer(buf)
+  buf = buf or vim.api.nvim_get_current_buf()
+  -- Check if buffer has no name
+  local name = vim.api.nvim_buf_get_name(buf)
+  if name ~= "" then
+    return false
+  end
+  -- Check if buffer is empty (0 or 1 empty line)
+  local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+  if #lines > 1 then
+    return false
+  end
+  if #lines == 1 and lines[1] ~= "" then
+    return false
+  end
+  -- Check if buffer is unmodified
+  if vim.bo[buf].modified then
+    return false
+  end
+  -- Check if it's a normal buffer (not special)
+  if vim.bo[buf].buftype ~= "" then
+    return false
+  end
+  return true
+end
+
 -- Open buffer in a new vertical split to the left, managing visible window count
 local function open_buffer(buf)
+  -- If current buffer is empty and unnamed (default startup buffer),
+  -- just replace it instead of creating a split
+  if is_empty_unnamed_buffer() then
+    vim.api.nvim_set_current_buf(buf)
+    return
+  end
+
   -- Create vertical split to the left and show the new buffer
   vim.cmd("leftabove vsplit")
   vim.api.nvim_set_current_buf(buf)
@@ -338,6 +372,82 @@ function M.pipe_load(source)
   -- Create new piper buffer (no parent for initial loads)
   local buf, _ = create_piper_buffer(content, cmd, nil)
   open_buffer(buf)
+end
+
+-- PipeLoadPrompt command: interactive prompt to load command output
+function M.pipe_load_prompt()
+  local prev_win = vim.api.nvim_get_current_win()
+
+  -- Create temp files
+  local output_file = vim.fn.tempname() .. ".piper_out"
+  local cmd_file = vim.fn.tempname() .. ".piper_cmd"
+
+  -- Ensure output and cmd files exist (empty)
+  io.open(output_file, "w"):close()
+  io.open(cmd_file, "w"):close()
+
+  -- Create terminal buffer
+  local term_buf = vim.api.nvim_create_buf(false, true)
+
+  -- Open terminal in a split at bottom
+  vim.cmd("botright " .. M.config.prompt_height .. "split")
+  local term_win = vim.api.nvim_get_current_win()
+  vim.api.nvim_win_set_buf(term_win, term_buf)
+
+  -- Start the pipe-load-prompt script
+  local bin_dir = get_bin_dir()
+  local pipe_load_prompt_script = bin_dir .. "/pipe-load-prompt"
+
+  vim.fn.termopen({ pipe_load_prompt_script, output_file, cmd_file }, {
+    on_exit = function(_, exit_code, _)
+      -- Clean up terminal window
+      if vim.api.nvim_win_is_valid(term_win) then
+        vim.api.nvim_win_close(term_win, true)
+      end
+
+      -- Read the command that was executed
+      local cmd = read_file(cmd_file)
+      if cmd then
+        cmd = cmd:gsub("[\n\r]+$", "")
+      end
+
+      -- Check if output file has content
+      local output = read_file(output_file)
+
+      -- Clean up temp files
+      delete_file(output_file)
+      delete_file(cmd_file)
+
+      -- Return focus to previous window if valid
+      if vim.api.nvim_win_is_valid(prev_win) then
+        vim.api.nvim_set_current_win(prev_win)
+      end
+
+      -- Handle results
+      if exit_code ~= 0 then
+        if cmd and cmd ~= "" then
+          vim.notify("Load command failed with exit code " .. exit_code, vim.log.levels.ERROR)
+        end
+        return
+      end
+
+      if not output or output == "" then
+        vim.notify("Load produced no output", vim.log.levels.WARN)
+        return
+      end
+
+      if not cmd or cmd == "" then
+        return
+      end
+
+      -- Create new piper buffer with output (no parent for loads)
+      local new_buf, _ = create_piper_buffer(output, "!" .. cmd, nil)
+      open_buffer(new_buf)
+    end,
+  })
+
+  -- Enter insert mode in terminal
+  vim.cmd("startinsert")
 end
 
 -- PipeList command: show all piper buffers with lineage
@@ -555,6 +665,10 @@ function M.setup(opts)
   vim.api.nvim_create_user_command("PipeList", function()
     M.pipe_list()
   end, { desc = "List all piper buffers" })
+
+  vim.api.nvim_create_user_command("PipeLoadPrompt", function()
+    M.pipe_load_prompt()
+  end, { desc = "Prompt for command and load output into piper buffer" })
 end
 
 return M
