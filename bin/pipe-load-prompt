@@ -10,6 +10,7 @@
 # Features:
 #   - Full ZLE support (history, Ctrl+R, tab completion, env vars)
 #   - Vi keybindings with working reverse search
+#   - On failure, shows error and re-prompts with command pre-filled
 #   - Command is written to cmd_file for the calling process
 #   - Exit status matches the executed command's exit status
 
@@ -24,23 +25,28 @@ cmd_file="$2"
 # Enable vi mode
 bindkey -v
 
-# Prompt for command using vared (ZLE-based editing)
 cmd=""
-if ! vared -p "load> " cmd; then
-    # User pressed Ctrl+C or Ctrl+D
-    exit 130
-fi
+while true; do
+    # Prompt for command using vared (ZLE-based editing)
+    # cmd retains previous value for editing on retry
+    if ! vared -p "load> " cmd; then
+        # User pressed Ctrl+C or Ctrl+D
+        exit 130
+    fi
 
-# Handle empty command
-if [[ -z "$cmd" ]]; then
-    exit 0
-fi
+    # Handle empty command
+    if [[ -z "$cmd" ]]; then
+        exit 0
+    fi
 
-# Write command to cmd_file
-echo "$cmd" > "$cmd_file"
+    # Execute command and capture output
+    # stderr goes to terminal so user sees errors
+    if eval "$cmd" > "$output_file"; then
+        # Success - write command and exit
+        echo "$cmd" > "$cmd_file"
+        exit 0
+    fi
 
-# Execute command and capture output
-eval "$cmd" > "$output_file"
-exit_status=$?
-
-exit $exit_status
+    # Command failed - loop to retry
+    echo ""
+done
