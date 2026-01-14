@@ -164,7 +164,7 @@ local function is_empty_unnamed_buffer(buf)
   return true
 end
 
--- Open buffer in a new horizontal split above, managing visible window count
+-- Open buffer in a new horizontal split below, managing visible window count
 local function open_buffer(buf)
   -- If current buffer is empty and unnamed (default startup buffer),
   -- just replace it instead of creating a split
@@ -173,19 +173,19 @@ local function open_buffer(buf)
     return
   end
 
-  -- Create horizontal split above and show the new buffer
-  vim.cmd("leftabove split")
+  -- Create horizontal split below and show the new buffer
+  vim.cmd("rightbelow split")
   vim.api.nvim_set_current_buf(buf)
 
   -- Get all piper windows after the split
   local piper_wins = get_piper_windows()
 
-  -- If we have more than max_visible piper windows, close the bottommost one
+  -- If we have more than max_visible piper windows, close the topmost one
   while #piper_wins > M.config.max_visible do
-    local bottommost = piper_wins[#piper_wins]
+    local topmost = piper_wins[1]
     -- Don't close the window we just created
-    if bottommost.win ~= vim.api.nvim_get_current_win() then
-      vim.api.nvim_win_close(bottommost.win, false)
+    if topmost.win ~= vim.api.nvim_get_current_win() then
+      vim.api.nvim_win_close(topmost.win, false)
     end
     piper_wins = get_piper_windows()
   end
