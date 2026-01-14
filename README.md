@@ -10,7 +10,7 @@ Build data processing pipelines interactively by piping buffer contents through 
 - **Side-by-Side View**: New buffers appear in vertical splits to the left, with configurable max visible
 - **Buffer History**: All buffers remain accessible via `:PipeList`
 - **Parent Tracking**: Each buffer knows which buffer it came from
-- **Two Modes**: Quick single-command (`:Pipe`) or exploratory shell (`:Pipet`)
+- **Multiple Modes**: Quick single-command (`:Pipe`), exploratory shell (`:Pipet`), or interactive load (`:PipeLoadPrompt`)
 - **Full Readline**: History, Ctrl+R search, tab completion, environment variables
 
 ## Installation
@@ -67,6 +67,12 @@ Bootstrap a new piper buffer from:
 
 - **File path**: `:PipeLoad /var/log/syslog`
 - **Command** (prefixed with `!`): `:PipeLoad !kubectl get pods`
+
+### `:PipeLoadPrompt`
+
+Opens a small 3-line terminal at the bottom with a `load>` prompt, similar to `:Pipe`. Type any shell command (without the `!` prefix), and its output becomes a new parentless piper buffer.
+
+This is useful when you want the readline experience (history, tab completion) but are starting fresh rather than piping from an existing buffer.
 
 ### `:PipeList`
 
@@ -192,6 +198,7 @@ vim.keymap.set('n', '<leader>pp', ':Pipe<CR>', { desc = 'Pipe buffer through com
 vim.keymap.set('n', '<leader>pt', ':Pipet<CR>', { desc = 'Open pipe terminal' })
 vim.keymap.set('n', '<leader>pl', ':PipeList<CR>', { desc = 'List pipe buffers' })
 vim.keymap.set('n', '<leader>pf', ':PipeLoad ', { desc = 'Load file into piper' })
+vim.keymap.set('n', '<leader>pn', ':PipeLoadPrompt<CR>', { desc = 'Load command output (with prompt)' })
 ```
 
 Or in VimL:
@@ -201,6 +208,7 @@ nnoremap <leader>pp :Pipe<CR>
 nnoremap <leader>pt :Pipet<CR>
 nnoremap <leader>pl :PipeList<CR>
 nnoremap <leader>pf :PipeLoad<Space>
+nnoremap <leader>pn :PipeLoadPrompt<CR>
 ```
 
 ## Working with stdin
