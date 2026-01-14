@@ -30,9 +30,6 @@ if [[ ! -r "$input_file" ]]; then
     exit 1
 fi
 
-# Enable vi line editing mode
-set -o vi
-
 # Prompt for command with readline support
 # -e enables readline editing
 # -p sets the prompt

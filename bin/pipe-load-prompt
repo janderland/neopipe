@@ -22,9 +22,6 @@ fi
 output_file="$1"
 cmd_file="$2"
 
-# Enable vi line editing mode
-set -o vi
-
 # Prompt for command with readline support
 # -e enables readline editing
 # -p sets the prompt
