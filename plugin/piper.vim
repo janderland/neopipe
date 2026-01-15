@@ -7,6 +7,17 @@ if exists('g:loaded_piper')
 endif
 let g:loaded_piper = 1
 
-" Auto-setup with default configuration
-" This allows the plugin to work out of the box and with -c commands
-lua require('piper').setup()
+" Auto-setup with default configuration if user hasn't called setup()
+" This allows the plugin to work out of the box
+lua << EOF
+-- Defer setup to allow user to call require('piper').setup() first
+vim.api.nvim_create_autocmd('VimEnter', {
+  callback = function()
+    -- Only auto-setup if commands don't exist yet
+    if vim.fn.exists(':PipePrompt') == 0 then
+      require('piper').setup()
+    end
+  end,
+  once = true,
+})
+EOF
