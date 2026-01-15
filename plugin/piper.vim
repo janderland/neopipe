@@ -14,7 +14,7 @@ lua << EOF
 vim.api.nvim_create_autocmd('VimEnter', {
   callback = function()
     -- Only auto-setup if commands don't exist yet
-    if vim.fn.exists(':Pipe') == 0 then
+    if vim.fn.exists(':PipePrompt') == 0 then
       require('piper').setup()
     end
   end,

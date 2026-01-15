@@ -37,7 +37,8 @@ cmd=""
 while true; do
     # Prompt for command using vared (ZLE-based editing)
     # cmd retains previous value for editing on retry
-    if ! vared -p "pipe> " cmd; then
+    # -c positions cursor at end of pre-filled text so backspace works
+    if ! vared -c ${#cmd} -p "pipe> " cmd; then
         # User pressed Ctrl+C or Ctrl+D
         exit 130
     fi
