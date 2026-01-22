@@ -218,7 +218,8 @@ function M.pipe_filter_prompt()
   local bin_dir = get_bin_dir()
   local pipe_prompt = bin_dir .. "/pipe-prompt"
 
-  vim.fn.termopen({ pipe_prompt, input_file, output_file, cmd_file }, {
+  -- Run with zsh -i to ensure interactive mode for vared
+  vim.fn.termopen({ "zsh", "-i", pipe_prompt, input_file, output_file, cmd_file }, {
     on_exit = function(_, exit_code, _)
       -- Clean up terminal window
       if vim.api.nvim_win_is_valid(term_win) then
@@ -397,7 +398,8 @@ function M.pipe_load_prompt()
   local bin_dir = get_bin_dir()
   local pipe_load_prompt_script = bin_dir .. "/pipe-load-prompt"
 
-  vim.fn.termopen({ pipe_load_prompt_script, output_file, cmd_file }, {
+  -- Run with zsh -i to ensure interactive mode for vared
+  vim.fn.termopen({ "zsh", "-i", pipe_load_prompt_script, output_file, cmd_file }, {
     on_exit = function(_, exit_code, _)
       -- Clean up terminal window
       if vim.api.nvim_win_is_valid(term_win) then
