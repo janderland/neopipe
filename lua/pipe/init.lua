@@ -1,4 +1,4 @@
--- piper.nvim - Interactive pipeline building with buffer history
+-- pipe.nvim - Interactive pipeline building with buffer history
 -- Each buffer is a read-only scratch buffer. Users can pipe any buffer
 -- through shell commands to create new buffers.
 
@@ -12,10 +12,10 @@ M.config = {
   max_visible = 3,
 }
 
--- State: mapping piper_id -> buffer number
+-- State: mapping pipe_id -> buffer number
 M.buffers = {}
 
--- Counter for unique piper IDs
+-- Counter for unique pipe IDs
 M.next_id = 1
 
 -- Get the plugin's bin directory
@@ -25,8 +25,8 @@ local function get_bin_dir()
   return plugin_dir .. "/bin"
 end
 
--- Create a new piper scratch buffer with given content
-local function create_piper_buffer(content, cmd, parent_id)
+-- Create a new pipe scratch buffer with given content
+local function create_pipe_buffer(content, cmd, parent_id)
   local buf = vim.api.nvim_create_buf(false, true)
   local id = M.next_id
   M.next_id = M.next_id + 1
@@ -38,7 +38,7 @@ local function create_piper_buffer(content, cmd, parent_id)
 
   -- Set buffer name
   local safe_cmd = cmd:gsub("[\n\r]", " "):sub(1, 50)
-  vim.api.nvim_buf_set_name(buf, string.format("piper://%d/%s", id, safe_cmd))
+  vim.api.nvim_buf_set_name(buf, string.format("pipe://%d/%s", id, safe_cmd))
 
   -- Set content
   local lines = vim.split(content, "\n", { plain = true })
@@ -52,10 +52,10 @@ local function create_piper_buffer(content, cmd, parent_id)
   vim.bo[buf].modifiable = false
 
   -- Set buffer variables
-  vim.api.nvim_buf_set_var(buf, "piper_id", id)
-  vim.api.nvim_buf_set_var(buf, "piper_cmd", cmd)
+  vim.api.nvim_buf_set_var(buf, "pipe_id", id)
+  vim.api.nvim_buf_set_var(buf, "pipe_cmd", cmd)
   if parent_id then
-    vim.api.nvim_buf_set_var(buf, "piper_parent", parent_id)
+    vim.api.nvim_buf_set_var(buf, "pipe_parent", parent_id)
   end
 
   -- Register in our mapping
@@ -69,9 +69,9 @@ local function create_piper_buffer(content, cmd, parent_id)
   return buf, id
 end
 
--- Get current buffer's piper_id if it's a piper buffer
-local function get_current_piper_id()
-  local ok, id = pcall(vim.api.nvim_buf_get_var, 0, "piper_id")
+-- Get current buffer's pipe_id if it's a pipe buffer
+local function get_current_pipe_id()
+  local ok, id = pcall(vim.api.nvim_buf_get_var, 0, "pipe_id")
   if ok then
     return id
   end
@@ -114,27 +114,27 @@ local function delete_file(path)
   end
 end
 
--- Check if a buffer is a piper buffer
-local function is_piper_buffer(buf)
-  local ok = pcall(vim.api.nvim_buf_get_var, buf, "piper_id")
+-- Check if a buffer is a pipe buffer
+local function is_pipe_buffer(buf)
+  local ok = pcall(vim.api.nvim_buf_get_var, buf, "pipe_id")
   return ok
 end
 
--- Get all windows showing piper buffers, sorted by row position (top to bottom)
-local function get_piper_windows()
-  local piper_wins = {}
+-- Get all windows showing pipe buffers, sorted by row position (top to bottom)
+local function get_pipe_windows()
+  local pipe_wins = {}
   for _, win in ipairs(vim.api.nvim_list_wins()) do
     local buf = vim.api.nvim_win_get_buf(win)
-    if is_piper_buffer(buf) then
+    if is_pipe_buffer(buf) then
       local pos = vim.api.nvim_win_get_position(win)
-      table.insert(piper_wins, { win = win, row = pos[1] })
+      table.insert(pipe_wins, { win = win, row = pos[1] })
     end
   end
   -- Sort by row position (topmost first)
-  table.sort(piper_wins, function(a, b)
+  table.sort(pipe_wins, function(a, b)
     return a.row < b.row
   end)
-  return piper_wins
+  return pipe_wins
 end
 
 -- Check if a buffer is empty and unnamed (like the default buffer on startup)
@@ -177,30 +177,30 @@ local function open_buffer(buf)
   vim.cmd("rightbelow split")
   vim.api.nvim_set_current_buf(buf)
 
-  -- Get all piper windows after the split
-  local piper_wins = get_piper_windows()
+  -- Get all pipe windows after the split
+  local pipe_wins = get_pipe_windows()
 
-  -- If we have more than max_visible piper windows, close the topmost one
-  while #piper_wins > M.config.max_visible do
-    local topmost = piper_wins[1]
+  -- If we have more than max_visible pipe windows, close the topmost one
+  while #pipe_wins > M.config.max_visible do
+    local topmost = pipe_wins[1]
     -- Don't close the window we just created
     if topmost.win ~= vim.api.nvim_get_current_win() then
       vim.api.nvim_win_close(topmost.win, false)
     end
-    piper_wins = get_piper_windows()
+    pipe_wins = get_pipe_windows()
   end
 end
 
 -- Pipe command: opens small terminal with pipe-prompt
 function M.pipe()
   local content = get_buffer_content()
-  local parent_id = get_current_piper_id()
+  local parent_id = get_current_pipe_id()
   local prev_win = vim.api.nvim_get_current_win()
 
   -- Create temp files
-  local input_file = write_temp_file(content, ".piper_in")
-  local output_file = vim.fn.tempname() .. ".piper_out"
-  local cmd_file = vim.fn.tempname() .. ".piper_cmd"
+  local input_file = write_temp_file(content, ".pipe_in")
+  local output_file = vim.fn.tempname() .. ".pipe_out"
+  local cmd_file = vim.fn.tempname() .. ".pipe_cmd"
 
   -- Ensure output and cmd files exist (empty)
   io.open(output_file, "w"):close()
@@ -261,8 +261,8 @@ function M.pipe()
         return
       end
 
-      -- Create new piper buffer with output
-      local new_buf, _ = create_piper_buffer(output, cmd, parent_id)
+      -- Create new pipe buffer with output
+      local new_buf, _ = create_pipe_buffer(output, cmd, parent_id)
       open_buffer(new_buf)
     end,
   })
@@ -274,12 +274,12 @@ end
 -- Pipet command: opens larger terminal with user's shell
 function M.pipet()
   local content = get_buffer_content()
-  local parent_id = get_current_piper_id()
+  local parent_id = get_current_pipe_id()
   local prev_win = vim.api.nvim_get_current_win()
 
   -- Create temp files for $IN and $OUT
-  local in_file = write_temp_file(content, ".piper_in")
-  local out_file = vim.fn.tempname() .. ".piper_out"
+  local in_file = write_temp_file(content, ".pipe_in")
+  local out_file = vim.fn.tempname() .. ".pipe_out"
 
   -- Ensure output file exists (empty)
   io.open(out_file, "w"):close()
@@ -323,9 +323,9 @@ function M.pipet()
         return
       end
 
-      -- Create new piper buffer with output
+      -- Create new pipe buffer with output
       -- For shell sessions, we use a generic command indicator
-      local new_buf, _ = create_piper_buffer(output, "$SHELL > $OUT", parent_id)
+      local new_buf, _ = create_pipe_buffer(output, "$SHELL > $OUT", parent_id)
       open_buffer(new_buf)
     end,
   })
@@ -334,7 +334,7 @@ function M.pipet()
   vim.cmd("startinsert")
 end
 
--- PipeLoad command: bootstrap a new piper buffer from command output
+-- PipeLoad command: bootstrap a new pipe buffer from command output
 function M.pipe_load(cmd)
   if not cmd or cmd == "" then
     vim.notify("PipeLoad requires a command", vim.log.levels.ERROR)
@@ -347,8 +347,8 @@ function M.pipe_load(cmd)
     return
   end
 
-  -- Create new piper buffer (no parent for initial loads)
-  local buf, _ = create_piper_buffer(output, "!" .. cmd, nil)
+  -- Create new pipe buffer (no parent for initial loads)
+  local buf, _ = create_pipe_buffer(output, "!" .. cmd, nil)
   open_buffer(buf)
 end
 
@@ -357,8 +357,8 @@ function M.pipe_load_prompt()
   local prev_win = vim.api.nvim_get_current_win()
 
   -- Create temp files
-  local output_file = vim.fn.tempname() .. ".piper_out"
-  local cmd_file = vim.fn.tempname() .. ".piper_cmd"
+  local output_file = vim.fn.tempname() .. ".pipe_out"
+  local cmd_file = vim.fn.tempname() .. ".pipe_cmd"
 
   -- Ensure output and cmd files exist (empty)
   io.open(output_file, "w"):close()
@@ -418,8 +418,8 @@ function M.pipe_load_prompt()
         return
       end
 
-      -- Create new piper buffer with output (no parent for loads)
-      local new_buf, _ = create_piper_buffer(output, "!" .. cmd, nil)
+      -- Create new pipe buffer with output (no parent for loads)
+      local new_buf, _ = create_pipe_buffer(output, "!" .. cmd, nil)
       open_buffer(new_buf)
     end,
   })
@@ -428,19 +428,19 @@ function M.pipe_load_prompt()
   vim.cmd("startinsert")
 end
 
--- PipeList command: show all piper buffers with lineage
+-- PipeList command: show all pipe buffers with lineage
 function M.pipe_list()
   local prev_win = vim.api.nvim_get_current_win()
 
-  -- Collect valid piper buffers
+  -- Collect valid pipe buffers
   local entries = {}
   local valid_buffers = {}
 
   for id, buf in pairs(M.buffers) do
     if vim.api.nvim_buf_is_valid(buf) then
       valid_buffers[id] = buf
-      local ok_cmd, cmd = pcall(vim.api.nvim_buf_get_var, buf, "piper_cmd")
-      local ok_parent, parent = pcall(vim.api.nvim_buf_get_var, buf, "piper_parent")
+      local ok_cmd, cmd = pcall(vim.api.nvim_buf_get_var, buf, "pipe_cmd")
+      local ok_parent, parent = pcall(vim.api.nvim_buf_get_var, buf, "pipe_parent")
       local line_count = vim.api.nvim_buf_line_count(buf)
 
       table.insert(entries, {
@@ -462,7 +462,7 @@ function M.pipe_list()
   end)
 
   if #entries == 0 then
-    vim.notify("No piper buffers", vim.log.levels.INFO)
+    vim.notify("No pipe buffers", vim.log.levels.INFO)
     return
   end
 
@@ -519,13 +519,13 @@ function M.pipe_list()
   vim.bo[list_buf].buftype = "nofile"
   vim.bo[list_buf].bufhidden = "wipe"
   vim.bo[list_buf].swapfile = false
-  vim.api.nvim_buf_set_name(list_buf, "piper://list")
+  vim.api.nvim_buf_set_name(list_buf, "pipe://list")
 
   vim.api.nvim_buf_set_lines(list_buf, 0, -1, false, display_lines)
   vim.bo[list_buf].modifiable = false
 
   -- Store entries for keymap handlers
-  vim.api.nvim_buf_set_var(list_buf, "piper_list_entries", entries)
+  vim.api.nvim_buf_set_var(list_buf, "pipe_list_entries", entries)
 
   -- Open in a split
   vim.cmd("botright split")
@@ -578,11 +578,11 @@ function M.pipe_list()
 
       -- Remove from entries and refresh display
       table.remove(entries, idx)
-      vim.api.nvim_buf_set_var(list_buf, "piper_list_entries", entries)
+      vim.api.nvim_buf_set_var(list_buf, "pipe_list_entries", entries)
 
       if #entries == 0 then
         vim.api.nvim_win_close(list_win, true)
-        vim.notify("No piper buffers remaining", vim.log.levels.INFO)
+        vim.notify("No pipe buffers remaining", vim.log.levels.INFO)
         return
       end
 
@@ -638,15 +638,15 @@ function M.setup(opts)
 
   vim.api.nvim_create_user_command("PipeLoad", function(cmd_opts)
     M.pipe_load(cmd_opts.args)
-  end, { nargs = 1, desc = "Load command output into piper buffer" })
+  end, { nargs = 1, desc = "Load command output into pipe buffer" })
 
   vim.api.nvim_create_user_command("PipeList", function()
     M.pipe_list()
-  end, { desc = "List all piper buffers" })
+  end, { desc = "List all pipe buffers" })
 
   vim.api.nvim_create_user_command("PipeLoadPrompt", function()
     M.pipe_load_prompt()
-  end, { desc = "Prompt for command and load output into piper buffer" })
+  end, { desc = "Prompt for command and load output into pipe buffer" })
 end
 
 return M

@@ -1,4 +1,4 @@
-# Dockerfile for linting and testing piper.nvim
+# Dockerfile for linting and testing pipe.nvim
 FROM debian:bookworm-slim
 
 # Install dependencies

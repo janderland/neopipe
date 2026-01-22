@@ -1,4 +1,4 @@
-# piper.nvim
+# pipe.nvim
 
 Interactive pipeline building with buffer history for Neovim.
 
@@ -19,9 +19,9 @@ Build data processing pipelines interactively by piping buffer contents through 
 
 ```lua
 {
-  'your-username/piper.nvim',
+  'your-username/pipe.nvim',
   config = function()
-    require('piper').setup()
+    require('pipe').setup()
   end,
 }
 ```
@@ -30,9 +30,9 @@ Build data processing pipelines interactively by piping buffer contents through 
 
 ```lua
 use {
-  'your-username/piper.nvim',
+  'your-username/pipe.nvim',
   config = function()
-    require('piper').setup()
+    require('pipe').setup()
   end,
 }
 ```
@@ -40,10 +40,10 @@ use {
 ### vim-plug
 
 ```vim
-Plug 'your-username/piper.nvim'
+Plug 'your-username/pipe.nvim'
 
 " In your init.vim or init.lua, after plug#end():
-lua require('piper').setup()
+lua require('pipe').setup()
 ```
 
 ## Commands
@@ -63,7 +63,7 @@ Explore freely, then capture output with `cmd > $OUT`. When you exit the shell, 
 
 ### `:PipeLoad {command}`
 
-Bootstrap a new piper buffer by running a shell command:
+Bootstrap a new pipe buffer by running a shell command:
 
 ```vim
 :PipeLoad kubectl get pods -o json
@@ -73,13 +73,13 @@ Bootstrap a new piper buffer by running a shell command:
 
 ### `:PipeLoadPrompt`
 
-Opens a small 3-line terminal at the bottom with a `load>` prompt, similar to `:PipePrompt`. Type any shell command, and its output becomes a new parentless piper buffer.
+Opens a small 3-line terminal at the bottom with a `load>` prompt, similar to `:PipePrompt`. Type any shell command, and its output becomes a new parentless pipe buffer.
 
 This is useful when you want the readline experience (history, tab completion) but are starting fresh rather than piping from an existing buffer.
 
 ### `:PipeList`
 
-Opens a scratch buffer showing all piper buffers with their lineage:
+Opens a scratch buffer showing all pipe buffers with their lineage:
 
 ```
  # │ Parent │ Lines │ Command
@@ -178,7 +178,7 @@ pipe> jq '.items[].status'          " Buffer 3, also parent 1
 ## Configuration
 
 ```lua
-require('piper').setup({
+require('pipe').setup({
   -- Shell to use for :PipeTerm (default: vim.o.shell)
   shell = '/bin/bash',
 
@@ -188,7 +188,7 @@ require('piper').setup({
   -- Height of the :PipeTerm terminal (default: 15)
   terminal_height = 15,
 
-  -- Maximum number of piper buffers visible at once (default: 3)
+  -- Maximum number of pipe buffers visible at once (default: 3)
   -- New buffers appear in a split below; topmost closes when exceeded
   max_visible = 3,
 })
@@ -200,7 +200,7 @@ require('piper').setup({
 vim.keymap.set('n', '<leader>pp', ':PipePrompt<CR>', { desc = 'Pipe buffer through command' })
 vim.keymap.set('n', '<leader>pt', ':PipeTerm<CR>', { desc = 'Open pipe terminal' })
 vim.keymap.set('n', '<leader>pl', ':PipeList<CR>', { desc = 'List pipe buffers' })
-vim.keymap.set('n', '<leader>pf', ':PipeLoad ', { desc = 'Load command output into piper' })
+vim.keymap.set('n', '<leader>pf', ':PipeLoad ', { desc = 'Load command output into pipe' })
 vim.keymap.set('n', '<leader>pn', ':PipeLoadPrompt<CR>', { desc = 'Load command output (with prompt)' })
 ```
 
@@ -222,7 +222,7 @@ Start Neovim with piped input:
 kubectl get pods -o json | nvim -c "setlocal buftype=nofile bufhidden=hide noswapfile" -
 ```
 
-Then use `:PipePrompt` to continue processing. Note that buffers from stdin won't have piper metadata initially, but any `:PipePrompt` operations will create proper piper buffers.
+Then use `:PipePrompt` to continue processing. Note that buffers from stdin won't have pipe metadata initially, but any `:PipePrompt` operations will create proper pipe buffers.
 
 For a cleaner workflow, use `:PipeLoad` with a command:
 
@@ -233,7 +233,7 @@ nvim -c "PipeLoad kubectl get pods -o json"
 Add this function to your `.bashrc` or `.zshrc` for quick access:
 
 ```bash
-np() {
+pf() {
   nvim -c "PipeLoad $*"
 }
 ```
@@ -248,12 +248,12 @@ np cat /var/log/syslog
 
 ## How It Works
 
-Each piper buffer stores metadata:
-- `piper_id` - unique incrementing counter
-- `piper_cmd` - command that generated the buffer
-- `piper_parent` - piper_id of the parent buffer (nil for initial loads)
+Each pipe buffer stores metadata:
+- `pipe_id` - unique incrementing counter
+- `pipe_cmd` - command that generated the buffer
+- `pipe_parent` - pipe_id of the parent buffer (nil for initial loads)
 
-Buffers are named like `piper://1/jq '.users'` and are read-only scratch buffers held in RAM.
+Buffers are named like `pipe://1/jq '.users'` and are read-only scratch buffers held in RAM.
 
 ## Tips
 
