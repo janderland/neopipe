@@ -191,8 +191,8 @@ local function open_buffer(buf)
   end
 end
 
--- Pipe command: opens small terminal with pipe-prompt
-function M.pipe()
+-- PipeFilterPrompt command: opens small terminal with pipe-prompt
+function M.pipe_filter_prompt()
   local content = get_buffer_content()
   local parent_id = get_current_pipe_id()
   local prev_win = vim.api.nvim_get_current_win()
@@ -271,8 +271,8 @@ function M.pipe()
   vim.cmd("startinsert")
 end
 
--- Pipet command: opens larger terminal with user's shell
-function M.pipet()
+-- PipeFilterTerm command: opens larger terminal with user's shell
+function M.pipe_filter_term()
   local content = get_buffer_content()
   local parent_id = get_current_pipe_id()
   local prev_win = vim.api.nvim_get_current_win()
@@ -332,6 +332,27 @@ function M.pipet()
 
   -- Enter insert mode in terminal
   vim.cmd("startinsert")
+end
+
+-- PipeFilter command: pipe current buffer through command directly
+function M.pipe_filter(cmd)
+  if not cmd or cmd == "" then
+    vim.notify("PipeFilter requires a command", vim.log.levels.ERROR)
+    return
+  end
+
+  local content = get_buffer_content()
+  local parent_id = get_current_pipe_id()
+
+  local output = vim.fn.system(cmd, content)
+  if vim.v.shell_error ~= 0 then
+    vim.notify("Command failed with exit code " .. vim.v.shell_error, vim.log.levels.ERROR)
+    return
+  end
+
+  -- Create new pipe buffer with parent
+  local buf, _ = create_pipe_buffer(output, cmd, parent_id)
+  open_buffer(buf)
 end
 
 -- PipeLoad command: bootstrap a new pipe buffer from command output
@@ -420,6 +441,64 @@ function M.pipe_load_prompt()
 
       -- Create new pipe buffer with output (no parent for loads)
       local new_buf, _ = create_pipe_buffer(output, "!" .. cmd, nil)
+      open_buffer(new_buf)
+    end,
+  })
+
+  -- Enter insert mode in terminal
+  vim.cmd("startinsert")
+end
+
+-- PipeLoadTerm command: opens terminal with $OUT only (no stdin)
+function M.pipe_load_term()
+  local prev_win = vim.api.nvim_get_current_win()
+
+  -- Create temp file for $OUT only
+  local out_file = vim.fn.tempname() .. ".pipe_out"
+
+  -- Ensure output file exists (empty)
+  io.open(out_file, "w"):close()
+
+  -- Create terminal buffer
+  local term_buf = vim.api.nvim_create_buf(false, true)
+
+  -- Open terminal in a split at bottom
+  vim.cmd("botright " .. M.config.terminal_height .. "split")
+  local term_win = vim.api.nvim_get_current_win()
+  vim.api.nvim_win_set_buf(term_win, term_buf)
+
+  -- Start user's shell with only OUT environment variable
+  local shell = M.config.shell
+  local env = {
+    OUT = out_file,
+  }
+
+  vim.fn.termopen({ shell }, {
+    env = env,
+    on_exit = function(_, _, _)
+      -- Clean up terminal window
+      if vim.api.nvim_win_is_valid(term_win) then
+        vim.api.nvim_win_close(term_win, true)
+      end
+
+      -- Check if output file has content
+      local output = read_file(out_file)
+
+      -- Clean up temp files
+      delete_file(out_file)
+
+      -- Return focus to previous window if valid
+      if vim.api.nvim_win_is_valid(prev_win) then
+        vim.api.nvim_set_current_win(prev_win)
+      end
+
+      if not output or output == "" then
+        return
+      end
+
+      -- Create new pipe buffer (no parent for loads)
+      -- For shell sessions, we use a generic command indicator
+      local new_buf, _ = create_pipe_buffer(output, "$SHELL > $OUT", nil)
       open_buffer(new_buf)
     end,
   })
@@ -628,25 +707,36 @@ function M.setup(opts)
   M.config = vim.tbl_deep_extend("force", M.config, opts)
 
   -- Create user commands
-  vim.api.nvim_create_user_command("PipePrompt", function()
-    M.pipe()
-  end, { desc = "Pipe current buffer through a shell command" })
-
-  vim.api.nvim_create_user_command("PipeTerm", function()
-    M.pipet()
-  end, { desc = "Open terminal with $IN and $OUT for interactive piping" })
-
+  -- Load commands (no stdin)
   vim.api.nvim_create_user_command("PipeLoad", function(cmd_opts)
     M.pipe_load(cmd_opts.args)
   end, { nargs = 1, desc = "Load command output into pipe buffer" })
 
-  vim.api.nvim_create_user_command("PipeList", function()
-    M.pipe_list()
-  end, { desc = "List all pipe buffers" })
-
   vim.api.nvim_create_user_command("PipeLoadPrompt", function()
     M.pipe_load_prompt()
   end, { desc = "Prompt for command and load output into pipe buffer" })
+
+  vim.api.nvim_create_user_command("PipeLoadTerm", function()
+    M.pipe_load_term()
+  end, { desc = "Open terminal with $OUT for loading command output" })
+
+  -- Filter commands (buffer as stdin)
+  vim.api.nvim_create_user_command("PipeFilter", function(cmd_opts)
+    M.pipe_filter(cmd_opts.args)
+  end, { nargs = 1, desc = "Pipe current buffer through a shell command" })
+
+  vim.api.nvim_create_user_command("PipeFilterPrompt", function()
+    M.pipe_filter_prompt()
+  end, { desc = "Prompt to pipe current buffer through a shell command" })
+
+  vim.api.nvim_create_user_command("PipeFilterTerm", function()
+    M.pipe_filter_term()
+  end, { desc = "Open terminal with $IN and $OUT for interactive piping" })
+
+  -- Utility command
+  vim.api.nvim_create_user_command("PipeList", function()
+    M.pipe_list()
+  end, { desc = "List all pipe buffers" })
 end
 
 return M
