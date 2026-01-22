@@ -10,7 +10,7 @@ Build data processing pipelines interactively by piping buffer contents through 
 - **Stacked View**: New buffers appear in horizontal splits below, with configurable max visible
 - **Buffer History**: All buffers remain accessible via `:PipeList`
 - **Parent Tracking**: Each buffer knows which buffer it came from
-- **Multiple Modes**: Quick single-command (`:Pipe`), exploratory shell (`:Pipet`), or interactive load (`:PipeLoadPrompt`)
+- **Multiple Modes**: Quick single-command (`:PipePrompt`), exploratory shell (`:PipeTerm`), or interactive load (`:PipeLoadPrompt`)
 - **Full Readline**: History, Ctrl+R search, tab completion, environment variables
 
 ## Installation
@@ -48,11 +48,11 @@ lua require('piper').setup()
 
 ## Commands
 
-### `:Pipe`
+### `:PipePrompt`
 
 Opens a small 3-line terminal at the bottom with a `pipe>` prompt. Type a shell command with full readline support. The current buffer contents are piped as stdin, and the output becomes a new buffer.
 
-### `:Pipet`
+### `:PipeTerm`
 
 Opens a larger 15-line terminal with your `$SHELL`. Two environment variables are available:
 
@@ -61,16 +61,19 @@ Opens a larger 15-line terminal with your `$SHELL`. Two environment variables ar
 
 Explore freely, then capture output with `cmd > $OUT`. When you exit the shell, if `$OUT` has content, it becomes a new buffer.
 
-### `:PipeLoad {source}`
+### `:PipeLoad {command}`
 
-Bootstrap a new piper buffer from:
+Bootstrap a new piper buffer by running a shell command:
 
-- **File path**: `:PipeLoad /var/log/syslog`
-- **Command** (prefixed with `!`): `:PipeLoad !kubectl get pods`
+```vim
+:PipeLoad kubectl get pods -o json
+:PipeLoad curl -s https://api.example.com/data
+:PipeLoad cat /var/log/syslog
+```
 
 ### `:PipeLoadPrompt`
 
-Opens a small 3-line terminal at the bottom with a `load>` prompt, similar to `:Pipe`. Type any shell command (without the `!` prefix), and its output becomes a new parentless piper buffer.
+Opens a small 3-line terminal at the bottom with a `load>` prompt, similar to `:PipePrompt`. Type any shell command, and its output becomes a new parentless piper buffer.
 
 This is useful when you want the readline experience (history, tab completion) but are starting fresh rather than piping from an existing buffer.
 
@@ -100,29 +103,29 @@ Opens a scratch buffer showing all piper buffers with their lineage:
 
 ```vim
 " Start with kubectl output
-:PipeLoad !kubectl get pods -o json
+:PipeLoad kubectl get pods -o json
 
 " Filter to just names
-:Pipe
+:PipePrompt
 pipe> jq '.items[].metadata.name'
 
 " Remove system pods
-:Pipe
+:PipePrompt
 pipe> grep -v kube-system
 
 " Sort and deduplicate
-:Pipe
+:PipePrompt
 pipe> sort -u
 ```
 
-### Exploratory Analysis with :Pipet
+### Exploratory Analysis with :PipeTerm
 
 ```vim
 " Load some JSON data
-:PipeLoad !curl -s https://api.example.com/data
+:PipeLoad curl -s https://api.example.com/data
 
 " Open interactive shell
-:Pipet
+:PipeTerm
 
 # In the shell, explore the data
 $ jq keys < $IN
@@ -140,18 +143,18 @@ $ jq '.users[] | {name, email}' < $IN > $OUT
 
 ```vim
 " Load a log file
-:PipeLoad /var/log/nginx/access.log
+:PipeLoad cat /var/log/nginx/access.log
 
 " Filter to errors
-:Pipe
+:PipePrompt
 pipe> grep -E ' (4|5)[0-9]{2} '
 
 " Extract IPs
-:Pipe
+:PipePrompt
 pipe> awk '{print $1}'
 
 " Count occurrences
-:Pipe
+:PipePrompt
 pipe> sort | uniq -c | sort -rn
 ```
 
@@ -160,15 +163,15 @@ pipe> sort | uniq -c | sort -rn
 Navigate back to any previous buffer with `:PipeList` and create a new branch:
 
 ```vim
-:PipeLoad !kubectl get pods -o json
-:Pipe
+:PipeLoad kubectl get pods -o json
+:PipePrompt
 pipe> jq '.items[].metadata.name'   " Buffer 2, parent 1
 
 " Go back to the original data
 :PipeList
 " Select buffer 1
 
-:Pipe
+:PipePrompt
 pipe> jq '.items[].status'          " Buffer 3, also parent 1
 ```
 
@@ -176,13 +179,13 @@ pipe> jq '.items[].status'          " Buffer 3, also parent 1
 
 ```lua
 require('piper').setup({
-  -- Shell to use for :Pipet (default: vim.o.shell)
+  -- Shell to use for :PipeTerm (default: vim.o.shell)
   shell = '/bin/bash',
 
-  -- Height of the :Pipe prompt terminal (default: 3)
+  -- Height of the :PipePrompt terminal (default: 3)
   prompt_height = 3,
 
-  -- Height of the :Pipet terminal (default: 15)
+  -- Height of the :PipeTerm terminal (default: 15)
   terminal_height = 15,
 
   -- Maximum number of piper buffers visible at once (default: 3)
@@ -194,18 +197,18 @@ require('piper').setup({
 ## Suggested Mappings
 
 ```lua
-vim.keymap.set('n', '<leader>pp', ':Pipe<CR>', { desc = 'Pipe buffer through command' })
-vim.keymap.set('n', '<leader>pt', ':Pipet<CR>', { desc = 'Open pipe terminal' })
+vim.keymap.set('n', '<leader>pp', ':PipePrompt<CR>', { desc = 'Pipe buffer through command' })
+vim.keymap.set('n', '<leader>pt', ':PipeTerm<CR>', { desc = 'Open pipe terminal' })
 vim.keymap.set('n', '<leader>pl', ':PipeList<CR>', { desc = 'List pipe buffers' })
-vim.keymap.set('n', '<leader>pf', ':PipeLoad ', { desc = 'Load file into piper' })
+vim.keymap.set('n', '<leader>pf', ':PipeLoad ', { desc = 'Load command output into piper' })
 vim.keymap.set('n', '<leader>pn', ':PipeLoadPrompt<CR>', { desc = 'Load command output (with prompt)' })
 ```
 
 Or in VimL:
 
 ```vim
-nnoremap <leader>pp :Pipe<CR>
-nnoremap <leader>pt :Pipet<CR>
+nnoremap <leader>pp :PipePrompt<CR>
+nnoremap <leader>pt :PipeTerm<CR>
 nnoremap <leader>pl :PipeList<CR>
 nnoremap <leader>pf :PipeLoad<Space>
 nnoremap <leader>pn :PipeLoadPrompt<CR>
@@ -219,19 +222,19 @@ Start Neovim with piped input:
 kubectl get pods -o json | nvim -c "setlocal buftype=nofile bufhidden=hide noswapfile" -
 ```
 
-Then use `:Pipe` to continue processing. Note that buffers from stdin won't have piper metadata initially, but any `:Pipe` operations will create proper piper buffers.
+Then use `:PipePrompt` to continue processing. Note that buffers from stdin won't have piper metadata initially, but any `:PipePrompt` operations will create proper piper buffers.
 
 For a cleaner workflow, use `:PipeLoad` with a command:
 
 ```bash
-nvim -c "PipeLoad !kubectl get pods -o json"
+nvim -c "PipeLoad kubectl get pods -o json"
 ```
 
 Add this function to your `.bashrc` or `.zshrc` for quick access:
 
 ```bash
 np() {
-  nvim -c "PipeLoad !$*"
+  nvim -c "PipeLoad $*"
 }
 ```
 
@@ -254,8 +257,8 @@ Buffers are named like `piper://1/jq '.users'` and are read-only scratch buffers
 
 ## Tips
 
-- Use `:Pipet` when you're not sure what command you need - explore interactively
-- Use `:Pipe` when you know exactly what transformation you want
+- Use `:PipeTerm` when you're not sure what command you need - explore interactively
+- Use `:PipePrompt` when you know exactly what transformation you want
 - Check `:PipeList` frequently to see your pipeline history
 - The `d` key in `:PipeList` cleans up buffers you no longer need
 - Parent relationships let you see how data flowed through your pipeline
